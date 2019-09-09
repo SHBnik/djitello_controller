@@ -14,6 +14,13 @@ bridge = CvBridge()
 
 center = [0,0]
 position = [0,0,0]
+controller_values = ["","",""]
+
+#TODO tune kp ki kd values
+
+xpid = pid(0,0,0)
+ypid = pid(0,0,0)
+zpid = pid(0,0,0)
 
 def get_center(data):
     
@@ -39,14 +46,34 @@ def gui(data):
     cv2.imshow('raw_image', cv2_img)
     cv2.waitKey(1)
 
+def xcontroller(desiredx):
+    newx = xpid.update_pid(desiredx,position[0])
+    return newx
+
+def ycontroller(desiredy):
+    newy = ypid.update_pid(desiredy,position[1])
+    return newy
+
+def zcontroller(desiredz):
+    newz = zpid.update_pid(desiredz,position[2])
+    return newz
+
+def controller(data): #x,y,z in millimeter
+    xvalue = xcontroller(data.x)
+    yvalue = xcontroller(data.y)
+    zvalue = xcontroller(data.z)
+    global controller_values
+    controller_values = [str(xvalue),str(yvalue),str(zvalue)]
+
 def main():
 
     rospy.init_node('position_holder', anonymous=False)
     rospy.Subscriber("/aruco_single/pose", geometry_msgs.msg.PoseStamped, read_position)
     rospy.Subscriber("/tello_node/image_raw", sensor_msgs.msg.Image, get_center)
     rospy.Subscriber("/aruco_single/result", sensor_msgs.msg.Image, gui)
-    # pose_publisher = rospy.Publisher('position', String, queue_size=10)
-    # pose_publisher.publish(position)
+    rospy.Subscriber("/controller/desired_points", String, controller)
+    controller_publisher = rospy.Publisher('controller/controller_values', String, queue_size=10)
+    controller_publisher.publish(controller_values)
     rospy.spin()
 
 if __name__ == '__main__':
